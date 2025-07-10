@@ -1,0 +1,46 @@
+version: '3.9'
+
+networks:
+  tictactoe-network:
+    driver: bridge
+
+services:
+  postgres:
+    container_name: tictactoe-postgres
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: tictactoe
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - tictactoe-postgres-data:/var/lib/postgresql/data
+    networks:
+      - tictactoe-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  tictactoe.api:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    image: ${DOCKER_REGISTRY-}tictactoeapi
+    build:
+      context: .
+      dockerfile: TicTacToe.API/Dockerfile
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    networks:
+      - tictactoe-network
+
+volumes:
+  tictactoe-postgres-data:
